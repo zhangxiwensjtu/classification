@@ -1,3 +1,4 @@
+# coding=utf-8
 # train.py
 #!/usr/bin/env	python3
 
@@ -130,9 +131,11 @@ if __name__ == '__main__':
     net = get_network(args)
 
     #data preprocessing:
+    # 预处理https://www.cnblogs.com/wanghui-garcia/p/11448460.html
     cifar100_training_loader = get_training_dataloader(
-        settings.CIFAR100_TRAIN_MEAN,
-        settings.CIFAR100_TRAIN_STD,
+        path='/home/steadysjtu/',
+        mean=settings.CIFAR100_TRAIN_MEAN,
+        std=settings.CIFAR100_TRAIN_STD,
         num_workers=4,
         batch_size=args.b,
         shuffle=True

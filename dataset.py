@@ -12,15 +12,15 @@ import numpy
 import torch
 from torch.utils.data import Dataset
 
-class CIFAR100Train(Dataset):
+class CellTrain(Dataset):
     """cifar100 test dataset, derived from
     torch.utils.data.DataSet
     """
 
     def __init__(self, path, transform=None):
         #if transform is given, we transoform data using
-        with open(os.path.join(path, 'train'), 'rb') as cifar100:
-            self.data = pickle.load(cifar100, encoding='bytes')
+        with open(os.path.join(path, 'train'), 'rb') as cellset:
+            self.data = pickle.load(cellset, encoding='bytes')
         self.transform = transform
 
     def __len__(self):
