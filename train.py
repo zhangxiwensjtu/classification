@@ -117,6 +117,7 @@ def eval_training(epoch=0, tb=True):
 
     return correct.float() / len(cifar100_test_loader.dataset)
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -137,7 +138,7 @@ if __name__ == '__main__':
         mean=settings.CIFAR100_TRAIN_MEAN,
         std=settings.CIFAR100_TRAIN_STD,
         num_workers=4,
-        batch_size=args.b,
+        batch_size=1,
         shuffle=True
     )
 
@@ -145,7 +146,7 @@ if __name__ == '__main__':
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=4,
-        batch_size=args.b,
+        batch_size=1,
         shuffle=True
     )
 

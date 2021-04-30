@@ -18,7 +18,7 @@ class CellTrain(Dataset):
     """
 
     def __init__(self, path, transform=None):
-        #if transform is given, we transoform data using
+        # if transform is given, we transform data using
         with open(os.path.join(path, 'train'), 'rb') as cellset:
             self.data = pickle.load(cellset, encoding='bytes')
         self.transform = transform
