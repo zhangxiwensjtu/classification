@@ -5,6 +5,8 @@ author baiyu
 import os
 import sys
 import pickle
+import glob
+import cv2
 
 from skimage import io
 import matplotlib.pyplot as plt
@@ -19,45 +21,55 @@ class CellTrain(Dataset):
 
     def __init__(self, path, transform=None):
         # if transform is given, we transform data using
-        with open(os.path.join(path, 'train'), 'rb') as cellset:
-            self.data = pickle.load(cellset, encoding='bytes')
+        # with open(os.path.join(path, 'train'), 'rb') as cellset:
+        #     self.data = pickle.load(cellset, encoding='bytes')
         self.transform = transform
+        self.imgfiles = glob.glob(pathname=os.path.join(path, 'image', '*.jpg'))
+        self.labelfiles = glob.glob(pathname=os.path.join(path, 'label', '*.txt'))
+        self.path = path
 
     def __len__(self):
-        return len(self.data['fine_labels'.encode()])
+        # print("here = ", len(self.labelfiles))
+        return len(self.labelfiles)
 
-    def __getitem__(self, index):
-        label = self.data['fine_labels'.encode()][index]
-        r = self.data['data'.encode()][index, :1024].reshape(32, 32)
-        g = self.data['data'.encode()][index, 1024:2048].reshape(32, 32)
-        b = self.data['data'.encode()][index, 2048:].reshape(32, 32)
-        image = numpy.dstack((r, g, b))
-
+    def __getitem__(self, ii):
+        labelfile = open(os.path.join(self.path, 'label', str(ii)+'.txt'))
+        label = int(labelfile.read().strip())
+        imgfile = os.path.join(self.path, 'image', str(ii)+'.jpg')
+        image = cv2.imread(imgfile).transpose(2, 0, 1)  # c,h,w
+        # print(image.shape)
         if self.transform:
             image = self.transform(image)
+        # print("image size = ", image.shape)  # (3,32,32)
+        # print("label= ", label)  # int
         return label, image
 
-class CIFAR100Test(Dataset):
+class CellTest(Dataset):
     """cifar100 test dataset, derived from
     torch.utils.data.DataSet
     """
 
     def __init__(self, path, transform=None):
-        with open(os.path.join(path, 'test'), 'rb') as cifar100:
-            self.data = pickle.load(cifar100, encoding='bytes')
+        # if transform is given, we transform data using
+        # with open(os.path.join(path, 'train'), 'rb') as cellset:
+        #     self.data = pickle.load(cellset, encoding='bytes')
         self.transform = transform
+        self.imgfiles = glob.glob(pathname=os.path.join(path, 'image', '*.jpg'))
+        self.labelfiles = glob.glob(pathname=os.path.join(path, 'label', '*.txt'))
+        self.path = path
 
     def __len__(self):
-        return len(self.data['data'.encode()])
+        return len(self.labelfiles)
 
-    def __getitem__(self, index):
-        label = self.data['fine_labels'.encode()][index]
-        r = self.data['data'.encode()][index, :1024].reshape(32, 32)
-        g = self.data['data'.encode()][index, 1024:2048].reshape(32, 32)
-        b = self.data['data'.encode()][index, 2048:].reshape(32, 32)
-        image = numpy.dstack((r, g, b))
-
+    def __getitem__(self, ii):
+        labelfile = open(os.path.join(self.path, 'label', str(ii) + '.txt'))
+        label = int(labelfile.read().strip())
+        imgfile = os.path.join(self.path, 'image', str(ii) + '.jpg')
+        image = cv2.imread(imgfile).transpose(2, 0, 1)  # c,h,w
+        # print(image.shape)
         if self.transform:
             image = self.transform(image)
+        # print("image size = ", image.shape)  # (3,32,32)
+        # print("label= ", label)  # int
         return label, image
 

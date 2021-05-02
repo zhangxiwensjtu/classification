@@ -15,7 +15,8 @@ from torch.optim.lr_scheduler import _LRScheduler
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from dataset import CellTrain
+from dataset import CellTrain, CellTest
+
 
 def get_network(args):
     """ return given network
@@ -164,7 +165,7 @@ def get_network(args):
     return net
 
 
-def get_training_dataloader(path, mean, std, batch_size=16, num_workers=2, shuffle=True):
+def get_training_dataloader(path, mean, std, batch_size=1, num_workers=2, shuffle=True):
     """ return training dataloader
     Args:
         mean: mean of cifar100 training dataset
@@ -177,21 +178,22 @@ def get_training_dataloader(path, mean, std, batch_size=16, num_workers=2, shuff
     """
 
     transform_train = transforms.Compose([
-        #transforms.ToPILImage(),
-        transforms.RandomCrop(32, padding=4),  # 随机裁剪，参数分别为：size, padding
-        transforms.RandomHorizontalFlip(),  # 水平翻转图像
-        transforms.RandomRotation(15),  # 依degrees随机旋转一定角度
+        transforms.ToPILImage(),
+        # transforms.RandomCrop(32, padding=4),  # 随机裁剪，参数分别为：size, padding
+        # transforms.RandomHorizontalFlip(),  # 水平翻转图像
+        # transforms.RandomRotation(15),  # 依degrees随机旋转一定角度
+        transforms.Resize((32, 32), interpolation=2),
         transforms.ToTensor(),  # 将PIL Image或者 ndarray 转换为tensor，并且归一化至[0-1]
         transforms.Normalize(mean, std)  # 对数据按通道进行标准化，即先减均值，再除以标准差，注意是 chw
     ])
     cell_training = CellTrain(path, transform=transform_train)
     # cifar100_training = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
-    cifar100_training_loader = DataLoader(
+    cell_training_loader = DataLoader(
         cell_training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
-    return cifar100_training_loader
+    return cell_training_loader
 
-def get_test_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
+def get_test_dataloader(path, mean, std, batch_size=16, num_workers=2, shuffle=True):
     """ return training dataloader
     Args:
         mean: mean of cifar100 test dataset
@@ -204,17 +206,18 @@ def get_test_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
     """
 
     transform_test = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((32, 32), interpolation=2),
         transforms.ToTensor(),
         transforms.Normalize(mean, std)
     ])
-    #cifar100_test = CIFAR100Test(path, transform=transform_test)
-    cifar100_test = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
-    print("in function:")
-    print("cifar100_test= ", cifar100_test)
-    cifar100_test_loader = DataLoader(
-        cifar100_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
+    cell_test = CellTest(path, transform=transform_test)
+    # print("in function:")
+    # print("cifar100_test= ", cifar100_test)
+    cell_test_loader = DataLoader(
+        cell_test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
-    return cifar100_test_loader
+    return cell_test_loader
 
 def compute_mean_std(cifar100_dataset):
     """compute the mean and std of cifar100 dataset

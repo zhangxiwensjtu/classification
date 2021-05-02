@@ -20,7 +20,7 @@ cfg = {
 
 class VGG(nn.Module):
 
-    def __init__(self, features, num_class=100):
+    def __init__(self, features, num_class=2):
         super().__init__()
         self.features = features
 
@@ -33,6 +33,7 @@ class VGG(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, num_class)
         )
+        # print("num_class= ", num_class)
 
     def forward(self, x):
         output = self.features(x)
