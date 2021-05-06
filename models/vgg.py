@@ -25,11 +25,13 @@ class VGG(nn.Module):
         self.features = features
 
         self.classifier = nn.Sequential(
-            nn.Linear(512, 4096),
+            nn.Linear(7*7*512, 4096),
             nn.ReLU(inplace=True),
+            # nn.Sigmoid(),
             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
+            # nn.Sigmoid(),
             nn.Dropout(),
             nn.Linear(4096, num_class)
         )
@@ -41,6 +43,7 @@ class VGG(nn.Module):
         output = self.classifier(output)
 
         return output
+
 
 def make_layers(cfg, batch_norm=False):
     layers = []

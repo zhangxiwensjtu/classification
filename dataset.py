@@ -7,7 +7,7 @@ import sys
 import pickle
 import glob
 import cv2
-
+from PIL import Image
 from skimage import io
 import matplotlib.pyplot as plt
 import numpy
@@ -36,8 +36,8 @@ class CellTrain(Dataset):
         labelfile = open(os.path.join(self.path, 'label', str(ii)+'.txt'))
         label = int(labelfile.read().strip())
         imgfile = os.path.join(self.path, 'image', str(ii)+'.jpg')
-        image = cv2.imread(imgfile).transpose(2, 0, 1)  # c,h,w
-        # print(image.shape)
+        image = Image.open(imgfile)
+        # print("here=", image.shape)
         if self.transform:
             image = self.transform(image)
         # print("image size = ", image.shape)  # (3,32,32)
@@ -65,11 +65,13 @@ class CellTest(Dataset):
         labelfile = open(os.path.join(self.path, 'label', str(ii) + '.txt'))
         label = int(labelfile.read().strip())
         imgfile = os.path.join(self.path, 'image', str(ii) + '.jpg')
-        image = cv2.imread(imgfile).transpose(2, 0, 1)  # c,h,w
-        # print(image.shape)
+        image = Image.open(imgfile)
+
+        # print("shape = ", image[0][1][2])
+        # print(image)
         if self.transform:
             image = self.transform(image)
-        # print("image size = ", image.shape)  # (3,32,32)
+        # print("image  = ", image)  # (3,32,32)
         # print("label= ", label)  # int
         return label, image
 

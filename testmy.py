@@ -31,8 +31,8 @@ if __name__ == '__main__':
         mean += np.array([r_mean, g_mean, b_mean])
         std += np.array([r_std, g_std, b_std])
     print(i)
-    mean = np.array(mean)/i
+    mean = np.array(mean)/i/255
     print("mean=", mean)
-    std = np.array(std)/i
+    std = np.array(std)/i/255
     print("std=", std)
 
