@@ -27,7 +27,7 @@ from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 from conf.global_settings import cell_train_mean, cell_train_std
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 def train(epoch):
@@ -204,10 +204,10 @@ if __name__ == '__main__':
 
     net = get_network(args)
     # 训练集
-    trainpath = '/home/steadysjtu/classification/train/'
+    trainpath = '/home/steadysjtu/classification/train_2/'
     # 测试集
-    testpath = '/home/steadysjtu/classification/test_gt/'  # 细胞子图路径
-    logpath = '/home/steadysjtu/classification/resnet101.txt'
+    testpath = '/home/steadysjtu/classification/test_2/'  # 细胞子图路径
+    logpath = '/home/steadysjtu/classification/vgg16_new2.txt'
     # data preprocessing:
     # 预处理https://www.cnblogs.com/wanghui-garcia/p/11448460.html
     cell_training_loader = get_training_dataloader(
@@ -257,19 +257,19 @@ if __name__ == '__main__':
         print("acctest=", acc_test)
         with open(logpath, "a") as f:
             f.write("epoch"+str(epoch)+':')
-            f.write("acctrain = "+str(acc_train.float()))
-            f.write("acctest = "+str(acc_test.float())+'\n')
+            f.write("acctrain = "+str(acc_train.item()))
+            f.write("acctest = "+str(acc_test.item())+'\n')
 
             # start to save best performance model after learning rate decay to 0.01
-        if epoch > settings.MILESTONES[1] and best_acc < acc_train:
+        if best_acc < acc_train.item():
             weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best', accuracy=acc_train)
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
             best_acc = acc_train
             continue
 
-        if not epoch % settings.SAVE_EPOCH:
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular', accuracy=acc_train)
-            print('saving weights file to {}'.format(weights_path))
-            torch.save(net.state_dict(), weights_path)
+        # if not epoch % settings.SAVE_EPOCH:
+        #     weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular', accuracy=acc_train)
+        #     print('saving weights file to {}'.format(weights_path))
+        #     torch.save(net.state_dict(), weights_path)
 

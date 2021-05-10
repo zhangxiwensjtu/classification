@@ -25,14 +25,14 @@ class VGG(nn.Module):
         self.features = features
 
         self.classifier = nn.Sequential(
-            nn.Linear(7*7*512, 4096),
+            nn.Linear(2*2*512, 4096),
             nn.ReLU(inplace=True),
             # nn.Sigmoid(),
-            nn.Dropout(),
+            # nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
             # nn.Sigmoid(),
-            nn.Dropout(),
+            # nn.Dropout(),
             nn.Linear(4096, num_class)
         )
         # print("num_class= ", num_class)

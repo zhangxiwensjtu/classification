@@ -18,7 +18,7 @@ import torchvision.transforms as transforms
 
 # 测试集
 imgPath = '/data/bone_marrow/data/cell/detection/cases/test-xml-210331/'     # 原图路径
-xmlPath = '/home/steadysjtu/classification/xml_test_pred/'   # 预测结果xml路径
+xmlPath = '/home/steadysjtu/classification/test-20210509-2classes/'   # 预测结果xml路径
 dstPath = '/home/steadysjtu/classification/xml_test_gt/'     # 测试集xml标注
 savePath = '/home/steadysjtu/classification/'                # 输出的混淆矩阵路径
 
@@ -36,12 +36,13 @@ def updataXml(imgPath, xmlPath):
     net = get_network(args)
     transform_test = transforms.Compose([
         transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
+        transforms.Resize((64, 64)),
         transforms.ToTensor(),
         transforms.Normalize(cell_train_mean, cell_train_std)
     ])
     count = 0
-    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/Wednesday_05_May_2021_21h_57m_53s/vgg16-128-best-0.8126984238624573.pth'))
+    change = 0
+    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/Sunday_09_May_2021_16h_28m_20s/vgg16-237-best-0.8952381014823914.pth'))
     for subdir in os.listdir(xmlPath):
         xmllist = os.listdir(xmlPath+subdir)
         isUpdated = False
@@ -78,6 +79,7 @@ def updataXml(imgPath, xmlPath):
                     output = net(subimg)        ####################################### 输入细胞图片，预测类别
                     _, preds = output.max(1)
                     preds = preds.item()
+                    # print(preds)
                     if preds == 0:
                         preds = pos0
                     else:
@@ -86,6 +88,9 @@ def updataXml(imgPath, xmlPath):
                     # print(newname)
                     namelist[0].childNodes[0].data = newname
                     count += 1
+                    if name != newname:
+                        change += 1
+                        print("change=", change,',newname = ', newname)
                 except:
                     print("error")
             if isUpdated:
@@ -212,4 +217,4 @@ def compareXml(testPath, dstPath):
 
 if __name__ == '__main__':
     updataXml(imgPath, xmlPath)
-    compareXml(xmlPath, dstPath)
+    # compareXml(xmlPath, dstPath)
