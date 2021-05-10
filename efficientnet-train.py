@@ -22,12 +22,12 @@ import torchvision.transforms as transforms
 
 from torch.utils.data import DataLoader
 # from torch.utils.tensorboard import SummaryWriter
-
+# from efficientnet_pytorch import EfficientNet
 from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 from conf.global_settings import cell_train_mean, cell_train_std
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 def train(epoch):
@@ -48,8 +48,8 @@ def train(epoch):
             labels = [1]
             labels = torch.from_numpy(np.array(labels))
             label1 += 1
-        else:
-            continue
+        # else:
+        #     continue
         # if flag == True:
         #     print(images.shape)
         #     img = images.clone()[0][:, :, :].numpy()
@@ -67,11 +67,14 @@ def train(epoch):
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
+
+        n_iter = (epoch - 1) * len(cell_training_loader) + batch_index + 1
+
         print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
             loss.item(),
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
-            trained_samples=batch_index * 1 + len(images),
+            trained_samples=batch_index * args.b + len(images),
             total_samples=len(cell_training_loader.dataset)
         ))
         if epoch <= args.warm:
@@ -90,7 +93,7 @@ def eval_training(epoch=0, tb=True):
 
     test_loss = 0.0  # cost function error
     correct = 0.0
-    num_test = 0
+    # num_test = 0
     num_0 = 0
     num_1 = 0
     for (labels, images) in cell_train_test_loader:
@@ -104,37 +107,35 @@ def eval_training(epoch=0, tb=True):
             num_1 += 1
         else:
             continue
-
-        num_test += 1
+        # num_test += 1
         if args.gpu:
             images = images.cuda()
             labels = labels.cuda()
         # print("images.shape =", images)
         outputs = net(images)
+        # print("outputs = ", outputs.shape)
         loss = loss_function(outputs, labels)
 
         test_loss += loss.item()
         _, preds = outputs.max(1)
-
-        # print("preds =", preds)
+        # print("preds = ", preds)
         # print("labels = ", labels)
-        # print("output = ", outputs)
-        # print("images=", images[0][0][:])
         correct += preds.eq(labels).sum()
+        # print("correct = ", correct)
 
     finish = time.time()
     print('Evaluating Network.....')
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
         test_loss / len(cell_test_loader.dataset),
-        correct / len(cell_test_loader.dataset),
+        correct.float() / len(cell_test_loader.dataset),
         finish - start
     ))
-    print("correct =", correct)
-    print("num_test=", num_test)
-    print("num_0=", num_0)
-    print("num_1 = ", num_1)
-    return correct / num_test
+    # print("correct =", correct)
+    # print("num_test=", num_test)
+    # print("num_0=", num_0)
+    # print("num_1 = ", num_1)
+    return correct.float() / len(cell_train_test_loader)
 
 
 @torch.no_grad()
@@ -145,7 +146,7 @@ def eval_testing(epoch=0, tb=True):
 
     test_loss = 0.0  # cost function error
     correct = 0.0
-    num_test = 0
+    # num_test = 0
     num_0 = 0
     num_1 = 0
     for (labels, images) in cell_test_loader:
@@ -160,7 +161,7 @@ def eval_testing(epoch=0, tb=True):
         else:
             continue
 
-        num_test += 1
+        # num_test += 1
         if args.gpu:
             images = images.cuda()
             labels = labels.cuda()
@@ -170,11 +171,6 @@ def eval_testing(epoch=0, tb=True):
 
         test_loss += loss.item()
         _, preds = outputs.max(1)
-
-        # print("preds =", preds)
-        # print("labels = ", labels)
-        # print("output = ", outputs)
-        # print("images=", images[0][0][:])
         correct += preds.eq(labels).sum()
 
     finish = time.time()
@@ -182,21 +178,21 @@ def eval_testing(epoch=0, tb=True):
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
         test_loss / len(cell_test_loader.dataset),
-        correct / len(cell_test_loader.dataset),
+        correct.float() / len(cell_test_loader.dataset),
         finish - start
     ))
-    print("correct =", correct)
-    print("num_test=", num_test)
-    print("num_0=", num_0)
-    print("num_1 = ", num_1)
-    return correct / num_test
+    # print("correct =", correct)
+    # print("num_test=", num_test)
+    # print("num_0=", num_0)
+    # print("num_1 = ", num_1)
+    return correct.float() / len(cell_test_loader)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
-    parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
+    parser.add_argument('-b', type=int, default=1, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.001, help='initial learning rate')
     parser.add_argument('-resume', action='store_true', default=False, help='resume training')
@@ -207,7 +203,7 @@ if __name__ == '__main__':
     trainpath = '/home/steadysjtu/classification/train_2/'
     # 测试集
     testpath = '/home/steadysjtu/classification/test_2/'  # 细胞子图路径
-    logpath = '/home/steadysjtu/classification/res.txt'
+    logpath = '/home/steadysjtu/classification/efficientnet.txt'
     # data preprocessing:
     # 预处理https://www.cnblogs.com/wanghui-garcia/p/11448460.html
     cell_training_loader = get_training_dataloader(
@@ -215,7 +211,7 @@ if __name__ == '__main__':
         mean=cell_train_mean,
         std=cell_train_std,
         num_workers=4,
-        batch_size=1,
+        batch_size=args.b,
         shuffle=True
     )
     cell_test_loader = get_test_dataloader(
@@ -223,7 +219,7 @@ if __name__ == '__main__':
         mean=cell_train_mean,
         std=cell_train_std,
         num_workers=4,
-        batch_size=1,
+        batch_size=args.b,
         shuffle=True
     )
     cell_train_test_loader = get_test_dataloader(
@@ -231,7 +227,7 @@ if __name__ == '__main__':
         mean=cell_train_mean,
         std=cell_train_std,
         num_workers=4,
-        batch_size=1,
+        batch_size=args.b,
         shuffle=True
     )
     loss_function = nn.CrossEntropyLoss()
@@ -245,7 +241,7 @@ if __name__ == '__main__':
         os.makedirs(checkpoint_path)
     checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}-{accuracy}.pth')
 
-    best_acc = 0.0
+    best_acc = 0.7
 
     for epoch in range(1, settings.EPOCH + 1):
         if epoch > args.warm:  # =1
@@ -262,7 +258,7 @@ if __name__ == '__main__':
 
             # start to save best performance model after learning rate decay to 0.01
         if best_acc < acc_train.item():
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best', accuracy=acc_train)
+            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best', accuracy=acc_train.item())
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
             best_acc = acc_train

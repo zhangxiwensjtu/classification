@@ -16,6 +16,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from dataset import CellTrain, CellTest
+from efficientnet_pytorch import EfficientNet
 
 
 def get_network(args):
@@ -34,6 +35,9 @@ def get_network(args):
     elif args.net == 'vgg19':
         from models.vgg import vgg19_bn
         net = vgg19_bn()
+    elif args.net == 'efficientnet':
+        from models.effnetv2 import effnetv2_s
+        net = effnetv2_s()
     elif args.net == 'densenet121':
         from models.densenet import densenet121
         net = densenet121()
