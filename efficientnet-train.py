@@ -235,7 +235,7 @@ if __name__ == '__main__':
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2)
     iter_per_epoch = len(cell_training_loader)
     warmup_scheduler = WarmUpLR(optimizer, 10000 * args.warm)
-    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
+    checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, '3_4', settings.TIME_NOW)
     # create checkpoint folder to save model
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)

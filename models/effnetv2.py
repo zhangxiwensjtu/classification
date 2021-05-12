@@ -1,181 +1,261 @@
-"""
-Creates a EfficientNetV2 Model as defined in:
-Mingxing Tan, Quoc V. Le. (2021). 
-EfficientNetV2: Smaller Models and Faster Training
-arXiv preprint arXiv:2104.00298.
-import from https://github.com/d-li14/mobilenetv2.pytorch
-"""
-
-import torch
-import torch.nn as nn
 import math
 
-__all__ = ['effnetv2_s']
+import mlconfig
+import torch
+from torch import nn
+try:
+    from torch.hub import load_state_dict_from_url
+except ImportError:
+    from torch.utils.model_zoo import load_url as load_state_dict_from_url
+
+model_urls = {
+    'efficientnet_b0': 'https://www.dropbox.com/s/9wigibun8n260qm/efficientnet-b0-4cfa50.pth?dl=1',
+    'efficientnet_b1': 'https://www.dropbox.com/s/6745ear79b1ltkh/efficientnet-b1-ef6aa7.pth?dl=1',
+    'efficientnet_b2': 'https://www.dropbox.com/s/0dhtv1t5wkjg0iy/efficientnet-b2-7c98aa.pth?dl=1',
+    'efficientnet_b3': 'https://www.dropbox.com/s/5uqok5gd33fom5p/efficientnet-b3-bdc7f4.pth?dl=1',
+    'efficientnet_b4': 'https://www.dropbox.com/s/y2nqt750lixs8kc/efficientnet-b4-3e4967.pth?dl=1',
+    'efficientnet_b5': 'https://www.dropbox.com/s/qxonlu3q02v9i47/efficientnet-b5-4c7978.pth?dl=1',
+    'efficientnet_b6': None,
+    'efficientnet_b7': None,
+}
+
+params = {
+    'efficientnet_b0': (1.0, 1.0, 224, 0.2),
+    'efficientnet_b1': (1.0, 1.1, 240, 0.2),
+    'efficientnet_b2': (1.1, 1.2, 260, 0.3),
+    'efficientnet_b3': (1.2, 1.4, 300, 0.3),
+    'efficientnet_b4': (1.4, 1.8, 380, 0.4),
+    'efficientnet_b5': (1.6, 2.2, 456, 0.4),
+    'efficientnet_b6': (1.8, 2.6, 528, 0.5),
+    'efficientnet_b7': (2.0, 3.1, 600, 0.5),
+}
 
 
-def _make_divisible(v, divisor, min_value=None):
-    """
-    This function is taken from the original tf repo.
-    It ensures that all layers have a channel number that is divisible by 8
-    It can be seen here:
-    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
-    :param v:
-    :param divisor:
-    :param min_value:
-    :return:
-    """
-    if min_value is None:
-        min_value = divisor
-    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-    # Make sure that round down does not go down by more than 10%.
-    if new_v < 0.9 * v:
-        new_v += divisor
-    return new_v
+class Swish(nn.Module):
+
+    def __init__(self, *args, **kwargs):
+        super(Swish, self).__init__()
+
+    def forward(self, x):
+        return x * torch.sigmoid(x)
 
 
-# SiLU (Swish) activation function
-if hasattr(nn, 'SiLU'):
-    SiLU = nn.SiLU
-else:
-    # For compatibility with old PyTorch versions
-    class SiLU(nn.Module):
-        def forward(self, x):
-            return x * torch.sigmoid(x)
+class ConvBNReLU(nn.Sequential):
 
- 
-class SELayer(nn.Module):
-    def __init__(self, inp, oup, reduction=4):
-        super(SELayer, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Sequential(
-                nn.Linear(oup, _make_divisible(inp // reduction, 8)),
-                SiLU(),
-                nn.Linear(_make_divisible(inp // reduction, 8), oup),
-                nn.Sigmoid()
+    def __init__(self, in_planes, out_planes, kernel_size, stride=1, groups=1):
+        padding = self._get_padding(kernel_size, stride)
+        super(ConvBNReLU, self).__init__(
+            nn.ZeroPad2d(padding),
+            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding=0, groups=groups, bias=False),
+            nn.BatchNorm2d(out_planes),
+            Swish(),
+        )
+
+    def _get_padding(self, kernel_size, stride):
+        p = max(kernel_size - stride, 0)
+        return [p // 2, p - p // 2, p // 2, p - p // 2]
+
+
+class SqueezeExcitation(nn.Module):
+
+    def __init__(self, in_planes, reduced_dim):
+        super(SqueezeExcitation, self).__init__()
+        self.se = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(in_planes, reduced_dim, 1),
+            Swish(),
+            nn.Conv2d(reduced_dim, in_planes, 1),
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
-        b, c, _, _ = x.size()
-        y = self.avg_pool(x).view(b, c)
-        y = self.fc(y).view(b, c, 1, 1)
-        return x * y
+        return x * self.se(x)
 
 
-def conv_3x3_bn(inp, oup, stride):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-        nn.BatchNorm2d(oup),
-        SiLU()
-    )
+class MBConvBlock(nn.Module):
 
-
-def conv_1x1_bn(inp, oup):
-    return nn.Sequential(
-        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-        nn.BatchNorm2d(oup),
-        SiLU()
-    )
-
-
-class MBConv(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio, use_se):
-        super(MBConv, self).__init__()
+    def __init__(self,
+                 in_planes,
+                 out_planes,
+                 expand_ratio,
+                 kernel_size,
+                 stride,
+                 reduction_ratio=4,
+                 drop_connect_rate=0.2):
+        super(MBConvBlock, self).__init__()
+        self.drop_connect_rate = drop_connect_rate
+        self.use_residual = in_planes == out_planes and stride == 1
         assert stride in [1, 2]
+        assert kernel_size in [3, 5]
 
-        hidden_dim = round(inp * expand_ratio)
-        self.identity = stride == 1 and inp == oup
-        if use_se:
-            self.conv = nn.Sequential(
-                # pw
-                nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(hidden_dim),
-                SiLU(),
-                # dw
-                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
-                nn.BatchNorm2d(hidden_dim),
-                SiLU(),
-                SELayer(inp, hidden_dim),
-                # pw-linear
-                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup),
-            )
-        else:
-            self.conv = nn.Sequential(
-                # fused
-                nn.Conv2d(inp, hidden_dim, 3, stride, 1, bias=False),
-                nn.BatchNorm2d(hidden_dim),
-                SiLU(),
-                # pw-linear
-                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup),
-            )
+        hidden_dim = in_planes * expand_ratio
+        reduced_dim = max(1, int(in_planes / reduction_ratio))
 
+        layers = []
+        # pw
+        if in_planes != hidden_dim:
+            layers += [ConvBNReLU(in_planes, hidden_dim, 1)]
+
+        layers += [
+            # dw
+            ConvBNReLU(hidden_dim, hidden_dim, kernel_size, stride=stride, groups=hidden_dim),
+            # se
+            SqueezeExcitation(hidden_dim, reduced_dim),
+            # pw-linear
+            nn.Conv2d(hidden_dim, out_planes, 1, bias=False),
+            nn.BatchNorm2d(out_planes),
+        ]
+
+        self.conv = nn.Sequential(*layers)
+
+    def _drop_connect(self, x):
+        if not self.training:
+            return x
+        keep_prob = 1.0 - self.drop_connect_rate
+        batch_size = x.size(0)
+        random_tensor = keep_prob
+        random_tensor += torch.rand(batch_size, 1, 1, 1, device=x.device)
+        binary_tensor = random_tensor.floor()
+        return x.div(keep_prob) * binary_tensor
 
     def forward(self, x):
-        if self.identity:
-            return x + self.conv(x)
+        if self.use_residual:
+            return x + self._drop_connect(self.conv(x))
         else:
             return self.conv(x)
 
 
-class EffNetV2(nn.Module):
-    def __init__(self, num_classes=2, width_mult=1.):
-        super(EffNetV2, self).__init__()
-        # setting of inverted residual blocks
-        self.cfgs = [
-            # t, c, n, s, SE
-            [1,  24,  2, 1, 0],
-            [4,  48,  4, 2, 0],
-            [4,  64,  4, 2, 0],
-            [4, 128,  6, 2, 1],
-            [6, 160,  9, 1, 1],
-            [6, 272, 15, 2, 1],
+def _make_divisible(value, divisor=8):
+    new_value = max(divisor, int(value + divisor / 2) // divisor * divisor)
+    if new_value < 0.9 * value:
+        new_value += divisor
+    return new_value
+
+
+def _round_filters(filters, width_mult):
+    if width_mult == 1.0:
+        return filters
+    return int(_make_divisible(filters * width_mult))
+
+
+def _round_repeats(repeats, depth_mult):
+    if depth_mult == 1.0:
+        return repeats
+    return int(math.ceil(depth_mult * repeats))
+
+
+@mlconfig.register
+class EfficientNet(nn.Module):
+
+    def __init__(self, width_mult=1.0, depth_mult=1.0, dropout_rate=0.2, num_classes=1000):
+        super(EfficientNet, self).__init__()
+
+        # yapf: disable
+        settings = [
+            # t,  c, n, s, k
+            [1,  16, 1, 1, 3],  # MBConv1_3x3, SE, 112 -> 112
+            [6,  24, 2, 2, 3],  # MBConv6_3x3, SE, 112 ->  56
+            [6,  40, 2, 2, 5],  # MBConv6_5x5, SE,  56 ->  28
+            [6,  80, 3, 2, 3],  # MBConv6_3x3, SE,  28 ->  14
+            [6, 112, 3, 1, 5],  # MBConv6_5x5, SE,  14 ->  14
+            [6, 192, 4, 2, 5],  # MBConv6_5x5, SE,  14 ->   7
+            [6, 320, 1, 1, 3]   # MBConv6_3x3, SE,   7 ->   7
         ]
+        # yapf: enable
 
-        # building first layer
-        input_channel = _make_divisible(24 * width_mult, 8)
-        layers = [conv_3x3_bn(3, input_channel, 2)]
-        # building inverted residual blocks
-        block = MBConv
-        for t, c, n, s, use_se in self.cfgs:
-            output_channel = _make_divisible(c * width_mult, 8)
-            for i in range(n):
-                layers.append(block(input_channel, output_channel, s if i == 0 else 1, t, use_se))
-                input_channel = output_channel
-        self.features = nn.Sequential(*layers)
-        # building last several layers
-        output_channel = _make_divisible(1792 * width_mult, 8) if width_mult > 1.0 else 1792
-        self.conv = conv_1x1_bn(input_channel, output_channel)
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.classifier = nn.Linear(output_channel, num_classes)
+        out_channels = _round_filters(32, width_mult)
+        features = [ConvBNReLU(3, out_channels, 3, stride=2)]
 
-        self._initialize_weights()
+        in_channels = out_channels
+        for t, c, n, s, k in settings:
+            out_channels = _round_filters(c, width_mult)
+            repeats = _round_repeats(n, depth_mult)
+            for i in range(repeats):
+                stride = s if i == 0 else 1
+                features += [MBConvBlock(in_channels, out_channels, expand_ratio=t, stride=stride, kernel_size=k)]
+                in_channels = out_channels
+
+        last_channels = _round_filters(1280, width_mult)
+        features += [ConvBNReLU(in_channels, last_channels, 1)]
+
+        self.features = nn.Sequential(*features)
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout_rate),
+            nn.Linear(last_channels, num_classes),
+        )
+
+        # weight initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                fan_out = m.weight.size(0)
+                init_range = 1.0 / math.sqrt(fan_out)
+                nn.init.uniform_(m.weight, -init_range, init_range)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
 
     def forward(self, x):
         x = self.features(x)
-        x = self.conv(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
+        x = x.mean([2, 3])
         x = self.classifier(x)
         return x
 
-    def _initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-                if m.bias is not None:
-                    m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                m.weight.data.normal_(0, 0.001)
-                m.bias.data.zero_()
 
-def effnetv2_s(**kwargs):
-    """
-    Constructs a EfficientNet V2 model
-    """
-    return EffNetV2(**kwargs)
+def _efficientnet(arch, pretrained, progress, **kwargs):
+    width_mult, depth_mult, _, dropout_rate = params[arch]
+    model = EfficientNet(width_mult, depth_mult, dropout_rate, **kwargs)
+    if pretrained:
+        state_dict = load_state_dict_from_url(model_urls[arch], progress=progress)
 
+        if 'num_classes' in kwargs and kwargs['num_classes'] != 1000:
+            del state_dict['classifier.1.weight']
+            del state_dict['classifier.1.bias']
+
+        model.load_state_dict(state_dict, strict=False)
+    return model
+
+
+@mlconfig.register
+def efficientnet_b0(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b0', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b1(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b1', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b2(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b2', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b3(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b3', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b4(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b4', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b5(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b5', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b6(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b6', pretrained, progress, **kwargs)
+
+
+@mlconfig.register
+def efficientnet_b7(pretrained=False, progress=True, **kwargs):
+    return _efficientnet('efficientnet_b7', pretrained, progress, **kwargs)

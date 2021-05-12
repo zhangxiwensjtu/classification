@@ -27,12 +27,10 @@ class VGG(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(2*2*512, 4096),
             nn.ReLU(inplace=True),
-            # nn.Sigmoid(),
-            # nn.Dropout(),
+            nn.Dropout(p=0.5),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            # nn.Sigmoid(),
-            # nn.Dropout(),
+            nn.Dropout(p=0.5),
             nn.Linear(4096, num_class)
         )
         # print("num_class= ", num_class)
@@ -71,7 +69,7 @@ def vgg13_bn():
     return VGG(make_layers(cfg['B'], batch_norm=True))
 
 def vgg16_bn():
-    return VGG(make_layers(cfg['D'], batch_norm=True))
+    return VGG(make_layers(cfg['D'], batch_norm=False))
 
 def vgg19_bn():
     return VGG(make_layers(cfg['E'], batch_norm=True))

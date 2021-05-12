@@ -185,10 +185,10 @@ def get_training_dataloader(path, mean, std, batch_size=1, num_workers=2, shuffl
         # transforms.ToPILImage(),
         # transforms.CenterCrop(224),
         # transforms.RandomCrop(32, padding=4),  # 随机裁剪，参数分别为：size, padding
-        # transforms.RandomRotation(15),  # 依degrees随机旋转一定角度
         transforms.Resize((64, 64)),
         transforms.RandomHorizontalFlip(),  # 水平翻转图像
         transforms.RandomVerticalFlip(),
+        transforms.RandomRotation(60),  # 依degrees随机旋转一定角度
         transforms.ToTensor(),  # 将PIL Image或者 ndarray 转换为tensor，并且归一化至[0-1]
         transforms.Normalize(mean, std)  # 对数据按通道进行标准化，即先减均值，再除以标准差，注意是 chw
     ])

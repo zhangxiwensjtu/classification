@@ -42,7 +42,8 @@ def updataXml(imgPath, xmlPath):
     ])
     count = 0
     change = 0
-    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/Sunday_09_May_2021_16h_28m_20s/vgg16-237-best-0.8952381014823914.pth'))
+    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/38/Tuesday_11_May_2021_15h_31m_42s/vgg16-6-best-0.9080459475517273.pth'))
+    net.eval()
     for subdir in os.listdir(xmlPath):
         xmllist = os.listdir(xmlPath+subdir)
         isUpdated = False
@@ -76,6 +77,7 @@ def updataXml(imgPath, xmlPath):
                     subimg = img[y1:y2, x1:x2, :]  # 细胞子图
                     subimg = transform_test(subimg)
                     subimg = subimg.unsqueeze(0)
+                    # print("sub = ", subimg.shape)
                     output = net(subimg)        ####################################### 输入细胞图片，预测类别
                     _, preds = output.max(1)
                     preds = preds.item()
@@ -217,4 +219,4 @@ def compareXml(testPath, dstPath):
 
 if __name__ == '__main__':
     updataXml(imgPath, xmlPath)
-    # compareXml(xmlPath, dstPath)
+    compareXml(xmlPath, dstPath)

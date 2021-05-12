@@ -29,9 +29,9 @@ CHECKPOINT_PATH = '/home/steadysjtu/classification/checkpoint'
 #total training epoches
 # EPOCH = 200
 EPOCH = 300
-MILESTONES = [100, 200, 300]
+# MILESTONES = [100, 200, 300]
 # MILESTONES = 20000
-# MILESTONES = [60, 120, 180]
+MILESTONES = [60, 120, 180]
 #initial learning rate
 #INIT_LR = 0.1
 
