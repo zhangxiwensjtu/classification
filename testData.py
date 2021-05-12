@@ -15,16 +15,38 @@ from confusion_matrix import ConfusionMatrix
 from utils import get_network, get_test_dataloader
 from conf.global_settings import cell_train_mean, cell_train_std
 import torchvision.transforms as transforms
-
+import torch.nn as nn
 # 测试集
 imgPath = '/data/bone_marrow/data/cell/detection/cases/test-xml-210331/'     # 原图路径
-xmlPath = '/home/steadysjtu/classification/test-20210509-2classes/'   # 预测结果xml路径
+xmlPath = '/home/steadysjtu/classification/xml/'   # 预测结果xml路径
 dstPath = '/home/steadysjtu/classification/xml_test_gt/'     # 测试集xml标注
 savePath = '/home/steadysjtu/classification/'                # 输出的混淆矩阵路径
 
 cellName = ['原始细胞','早幼粒细胞', '嗜中性-中幼粒细胞','嗜中性-晚幼粒细胞','嗜中性-带形核',
     '嗜中性-分叶核', '嗜酸','嗜碱', '原红细胞', '早幼红细胞','中幼红细胞','晚幼红细胞',
     '成熟淋巴细胞', '单核细胞', '浆细胞','忽略']
+
+
+def procXml(procPath):
+    '''处理xml文件第一行，如果多余则删除'''
+    for subdir in os.listdir(procPath):
+        #print(subdir)
+        xmllist = os.listdir(procPath+subdir)
+        for xmlfile in xmllist:
+            procfile = procPath+subdir+'/'+xmlfile
+            lines = codecs.open(procfile,encoding='utf-8').readlines()
+            if lines[0][1] == "?":
+                first_line = True
+                second_line = True
+                for line in lines:
+                    if first_line:
+                        first_line = False
+                    elif second_line:
+                        second_line = False
+                        codecs.open(procfile, 'w', 'utf-8').writelines(line)
+                    else:
+                        codecs.open(procfile, 'a', 'utf-8').writelines(line)
+
 
 def updataXml(imgPath, xmlPath): 
     '''重新二分类，更新xml'''
@@ -42,7 +64,7 @@ def updataXml(imgPath, xmlPath):
     ])
     count = 0
     change = 0
-    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/38/Tuesday_11_May_2021_15h_31m_42s/vgg16-6-best-0.9080459475517273.pth'))
+    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/38/Wednesday_12_May_2021_13h_00m_05s/vgg16-23-best-0.9005681818181818.pth'))
     net.eval()
     for subdir in os.listdir(xmlPath):
         xmllist = os.listdir(xmlPath+subdir)
@@ -79,6 +101,12 @@ def updataXml(imgPath, xmlPath):
                     subimg = subimg.unsqueeze(0)
                     # print("sub = ", subimg.shape)
                     output = net(subimg)        ####################################### 输入细胞图片，预测类别
+                    # softmax = nn.Softmax()
+                    # out = softmax(output)
+                    # prob = out.detach().numpy()
+                    # with open("/home/steadysjtu/classification/prob.txt", "a") as f:
+                    #     f.write(str(prob[0][0])+' '+str(prob[0][1])+'\n')
+
                     _, preds = output.max(1)
                     preds = preds.item()
                     # print(preds)
@@ -218,5 +246,6 @@ def compareXml(testPath, dstPath):
     return 0
 
 if __name__ == '__main__':
+    procXml(xmlPath)
     updataXml(imgPath, xmlPath)
-    compareXml(xmlPath, dstPath)
+    # compareXml(xmlPath, dstPath)

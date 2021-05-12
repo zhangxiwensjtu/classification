@@ -178,6 +178,7 @@ def eval_testing(epoch=0, tb=True):
             labels = labels.cuda()
         # print("images.shape =", images)
         outputs = net(images)
+
         loss = loss_function(outputs, labels)
 
         test_loss += loss.item()
@@ -227,7 +228,7 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
     parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
-    parser.add_argument('-lr', type=float, default=0.00025, help='initial learning rate')
+    parser.add_argument('-lr', type=float, default=0.0001, help='initial learning rate')
     parser.add_argument('-resume', action='store_true', default=False, help='resume training')
     args = parser.parse_args()
     typea = 8
@@ -236,7 +237,7 @@ if __name__ == '__main__':
     # 训练集
     trainpath = '/home/steadysjtu/classification/train_2/'
     # 测试集
-    testpath = '/home/steadysjtu/classification/test_2/'  # 细胞子图路径
+    testpath = '/home/steadysjtu/classification/test_3/'  # 细胞子图路径
 
     # data preprocessing:
     # 预处理https://www.cnblogs.com/wanghui-garcia/p/11448460.html
