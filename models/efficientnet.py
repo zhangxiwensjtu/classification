@@ -122,7 +122,7 @@ class MBConvBlock(nn.Module):
 
 
 class EfficientNet(nn.Module):
-    def __init__(self, stage_args, net_args, num_classes=100):
+    def __init__(self, stage_args, net_args, num_classes=2):
         super().__init__()
 
         self.stage_args = stage_args

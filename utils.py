@@ -16,7 +16,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from dataset import CellTrain, CellTest
-from efficientnet_pytorch import EfficientNet
+# from efficientnet_pytorch import EfficientNet
 
 
 def get_network(args):
@@ -35,9 +35,9 @@ def get_network(args):
     elif args.net == 'vgg19':
         from models.vgg import vgg19_bn
         net = vgg19_bn()
-    elif args.net == 'efficientnet':
-        from models.effnetv2 import effnetv2_s
-        net = effnetv2_s()
+    # elif args.net == 'efficientnet':
+    #     from models.effnetv2 import effnetv2_s
+    #     net = effnetv2_s()
     elif args.net == 'densenet121':
         from models.densenet import densenet121
         net = densenet121()
@@ -158,6 +158,36 @@ def get_network(args):
     elif args.net == 'stochasticdepth101':
         from models.stochasticdepth import stochastic_depth_resnet101
         net = stochastic_depth_resnet101()
+    elif args.net == 'efficientnetb0':
+        from models.efficientnet import efficientnetb0
+        net = efficientnetb0()
+    elif args.net == 'efficientnetb1':
+        from models.efficientnet import efficientnetb1
+        net = efficientnetb1()
+    elif args.net == 'efficientnetb2':
+        from models.efficientnet import efficientnetb2
+        net = efficientnetb2()
+    elif args.net == 'efficientnetb3':
+        from models.efficientnet import efficientnetb3
+        net = efficientnetb3()
+    elif args.net == 'efficientnetb4':
+        from models.efficientnet import efficientnetb4
+        net = efficientnetb4()
+    elif args.net == 'efficientnetb5':
+        from models.efficientnet import efficientnetb5
+        net = efficientnetb5()
+    elif args.net == 'efficientnetb6':
+        from models.efficientnet import efficientnetb6
+        net = efficientnetb6()
+    elif args.net == 'efficientnetb7':
+        from models.efficientnet import efficientnetb7
+        net = efficientnetb7()
+    elif args.net == 'efficientnetl2':
+        from models.efficientnet import efficientnetl2
+        net = efficientnetl2()
+    elif args.net == 'eff':
+        from models.efficientnet_pytorch import EfficientNet
+        net = EfficientNet.from_pretrained('efficientnet-b7', num_classes=2)
 
     else:
         print('the network name you have entered is not supported yet')
@@ -165,6 +195,7 @@ def get_network(args):
 
     if args.gpu: #use_gpu
         net = net.cuda()
+        print("use-gpu")
 
     return net
 

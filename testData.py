@@ -64,7 +64,7 @@ def updataXml(imgPath, xmlPath):
     ])
     count = 0
     change = 0
-    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/38/Wednesday_12_May_2021_13h_00m_05s/vgg16-23-best-0.9005681818181818.pth'))
+    net.load_state_dict(torch.load('/home/steadysjtu/classification/checkpoint/vgg16/45/Friday_14_May_2021_21h_49m_34s/vgg16-58-best-0.930550284629981.pth'))
     net.eval()
     for subdir in os.listdir(xmlPath):
         xmllist = os.listdir(xmlPath+subdir)
@@ -80,10 +80,10 @@ def updataXml(imgPath, xmlPath):
             for objects in objectlist:
                 namelist = objects.getElementsByTagName('name')
                 name = namelist[0].childNodes[0].data
-                if name != '原红细胞' and name != '早幼红细胞': # 对原红细胞和早幼红细胞做二分类
+                if name != '嗜中性-带形核' and name != '嗜中性-分叶核': # 对原红细胞和早幼红细胞做二分类
                     continue
-                pos0 = cellName.index('原红细胞')
-                pos1 = cellName.index('早幼红细胞')
+                pos0 = cellName.index('嗜中性-带形核')
+                pos1 = cellName.index('嗜中性-分叶核')
                 isUpdated = True         # xml需要更新
                 bndbox = objects.getElementsByTagName('bndbox')
                 for box in bndbox:
@@ -194,7 +194,7 @@ def compareXml(testPath, dstPath):
             DOMTree_dst = xml.dom.minidom.parse(dstfile) 
             collection_test = DOMTree_test.documentElement # 得到文档元素对象
             collection_dst = DOMTree_dst.documentElement 
-            objectlist_test = collection_test.getElementsByTagName("object") # 得到标签名为object的信息
+            objectlist_test = collection_test.getElementsByTagName("object")  # 得到标签名为object的信息
             objectlist_dst = collection_dst.getElementsByTagName("object") 
             
             conf_mat = ConfusionMatrix(num_classes=16, CONF_THRESHOLD=0.3, IOU_THRESHOLD=0.3)
@@ -238,14 +238,18 @@ def compareXml(testPath, dstPath):
                 gt_bbox_label.append(p2)
             my_result = np.array(my_result)
             gt_bbox_label = np.array(gt_bbox_label)
+            # print("my_result.shape =", my_result.shape)
             conf_mat.process_batch(my_result, gt_bbox_label)
             tmp = conf_mat.return_matrix()
+            # input()
             table = table + tmp
-    np.savetxt(savePath+"table.txt", table, fmt="%d", delimiter="\t") #混淆矩阵
-    np.savetxt(savePath+"nums.txt", table, fmt="%d", delimiter="\t")  #预测各类细胞个数
+    np.savetxt(savePath+"table.txt", table, fmt="%d", delimiter="\t")  # 混淆矩阵
+    np.savetxt(savePath+"nums.txt", table, fmt="%d", delimiter="\t")   # 预测各类细胞个数
     return 0
+
 
 if __name__ == '__main__':
     procXml(xmlPath)
+    procXml(dstPath)
     updataXml(imgPath, xmlPath)
     # compareXml(xmlPath, dstPath)

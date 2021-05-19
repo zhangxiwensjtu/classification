@@ -32,18 +32,18 @@ pathtrain = '/home/steadysjtu/classification/train/'
 pathtest = '/home/steadysjtu/classification/test_gt/'
 labelfilestrain = glob.glob(pathname=os.path.join(pathtrain, 'label', '*.txt'))
 labelfilestest = glob.glob(pathname=os.path.join(pathtest, 'label', '*.txt'))
-tmp = glob.glob(pathname=os.path.join('/home/steadysjtu/classification/train_2/label','*.txt'))
+# tmp = glob.glob(pathname=os.path.join('/home/steadysjtu/classification/train/label','*.txt'))
 # 先清空train_2,test_2
-os.system('rm -r /home/steadysjtu/classification/train_2/label/')
-os.system('rm -r /home/steadysjtu/classification/train_2/image/')
-os.system('rm -r /home/steadysjtu/classification/test_2/label/')
-os.system('rm -r /home/steadysjtu/classification/test_2/image/')
-os.system('mkdir /home/steadysjtu/classification/train_2/')
-os.system('mkdir /home/steadysjtu/classification/test_2/')
-os.system('mkdir /home/steadysjtu/classification/train_2/label')
-os.system('mkdir /home/steadysjtu/classification/train_2/image')
-os.system('mkdir /home/steadysjtu/classification/test_2/label')
-os.system('mkdir /home/steadysjtu/classification/test_2/image')
+os.system('rm -r /home/steadysjtu/classification/train_1/label/')
+os.system('rm -r /home/steadysjtu/classification/train_1/image/')
+os.system('rm -r /home/steadysjtu/classification/test_1/label/')
+os.system('rm -r /home/steadysjtu/classification/test_1/image/')
+os.system('mkdir /home/steadysjtu/classification/train_1/')
+os.system('mkdir /home/steadysjtu/classification/test_1/')
+os.system('mkdir /home/steadysjtu/classification/train_1/label')
+os.system('mkdir /home/steadysjtu/classification/train_1/image')
+os.system('mkdir /home/steadysjtu/classification/test_1/label')
+os.system('mkdir /home/steadysjtu/classification/test_1/image')
 
 # l1 = 0
 # l2 = 0
@@ -53,8 +53,8 @@ for i in range(len(labelfilestrain)):
     # print(content.shape)
     if int(content) == label1 or int(content) == label2:
         # print(i)
-        os.system('cp /home/steadysjtu/classification/train/label/'+str(i)+'.txt'+' ' + '/home/steadysjtu/classification/train_2/label/'+str(j)+'.txt')
-        os.system('cp /home/steadysjtu/classification/train/image/'+str(i)+'.jpg'+' ' + '/home/steadysjtu/classification/train_2/image/'+str(j)+'.jpg')
+        os.system('cp /home/steadysjtu/classification/train/label/'+str(i)+'.txt'+' ' + '/home/steadysjtu/classification/train_1/label/'+str(j)+'.txt')
+        os.system('cp /home/steadysjtu/classification/train/image/'+str(i)+'.jpg'+' ' + '/home/steadysjtu/classification/train_1/image/'+str(j)+'.jpg')
         j += 1
         f.close()
 
@@ -64,9 +64,9 @@ for i in range(len(labelfilestest)):
     # print(content.shape)
     if int(content) == label1 or int(content) == label2:
         os.system('cp /home/steadysjtu/classification/test_gt/label/' + str(
-            i) + '.txt' + ' ' + '/home/steadysjtu/classification/test_2/label/' + str(k) + '.txt')
+            i) + '.txt' + ' ' + '/home/steadysjtu/classification/test_1/label/' + str(k) + '.txt')
         os.system('cp /home/steadysjtu/classification/test_gt/image/' + str(
-            i) + '.jpg' + ' ' + '/home/steadysjtu/classification/test_2/image/' + str(k) + '.jpg')
+            i) + '.jpg' + ' ' + '/home/steadysjtu/classification/test_1/image/' + str(k) + '.jpg')
         k += 1
         f.close()
 

@@ -17,6 +17,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from models.efficientnet import EfficientNet
 import torchvision
 import torchvision.transforms as transforms
 import torch.utils.model_zoo as model_zoo
@@ -75,16 +76,19 @@ def train(epoch):
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
-        # print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
-        #     loss.item(),
-        #     optimizer.param_groups[0]['lr'],
-        #     epoch=epoch,
-        #     trained_samples=batch_index * 1 + len(images),
-        #     total_samples=len(cell_training_loader.dataset)
-        # ))
+        print('Training Epoch: {epoch} [{trained_samples}/{total_samples}]\tLoss: {:0.4f}\tLR: {:0.6f}'.format(
+            loss.item(),
+            optimizer.param_groups[0]['lr'],
+            epoch=epoch,
+            trained_samples=batch_index * 1 + len(images),
+            total_samples=len(cell_training_loader.dataset)
+        ))
         if epoch <= args.warm:
             warmup_scheduler.step()
     finish = time.time()
+    finish = time.time()
+    t = finish-start
+    # print("time = ",t)
     # print("label0=", label0)
     # print("label1=", label1)
     # print('epoch {} training time consumed: {:.2f}s'.format(epoch, finish - start))
@@ -130,7 +134,7 @@ def eval_training(epoch=0, tb=True):
         # print("images=", images[0][0][:])
         correct += preds.eq(labels).sum()
     print("trainloss = ", test_loss, end=' ')
-    finish = time.time()
+
     # print('Evaluating Network.....')
     # print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
     #     epoch,
@@ -228,16 +232,16 @@ if __name__ == '__main__':
     parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
     parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
-    parser.add_argument('-lr', type=float, default=0.0001, help='initial learning rate')
+    parser.add_argument('-lr', type=float, default=0.001, help='initial learning rate')
     parser.add_argument('-resume', action='store_true', default=False, help='resume training')
     args = parser.parse_args()
-    typea = 4
-    typeb = 5
+    typea = 8
+    typeb = 9
     net = get_network(args)
     # 训练集
-    trainpath = '/home/steadysjtu/classification/train_4/'
+    trainpath = '/home/steadysjtu/classification/train_1/'
     # 测试集
-    testpath = '/home/steadysjtu/classification/test_4/'  # 细胞子图路径
+    testpath = '/home/steadysjtu/classification/test_1/'  # 细胞子图路径
 
     # data preprocessing:
     # 预处理https://www.cnblogs.com/wanghui-garcia/p/11448460.html
@@ -245,7 +249,7 @@ if __name__ == '__main__':
         path=trainpath,
         mean=cell_train_mean,
         std=cell_train_std,
-        num_workers=4,
+        num_workers=8,
         batch_size=1,
         shuffle=True
     )
@@ -253,7 +257,7 @@ if __name__ == '__main__':
         path=testpath,
         mean=cell_train_mean,
         std=cell_train_std,
-        num_workers=4,
+        num_workers=16,
         batch_size=1,
         shuffle=True
     )
@@ -261,12 +265,12 @@ if __name__ == '__main__':
         path=trainpath,
         mean=cell_train_mean,
         std=cell_train_std,
-        num_workers=4,
+        num_workers=16,
         batch_size=1,
         shuffle=True
     )
 
-    loss_function = nn.CrossEntropyLoss()
+    loss_function = nn.CrossEntropyLoss().cuda()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2)
     iter_per_epoch = len(cell_training_loader)
@@ -279,29 +283,17 @@ if __name__ == '__main__':
     checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}-{accuracy}.pth')
 
     best_acc = 0.0
-    # pretrained_weight = torch.load('/home/steadysjtu/classification/checkpoint/vgg16/Monday_10_May_2021_10h_23m_49s/vgg16-257-best-0.9106575846672058.pth')
-    # for key, v in pretrained_weight.items():
-    #     print('a=',key, v.size())
-    pretrained_weight = model_zoo.load_url('https://download.pytorch.org/models/vgg16-397923af.pth')
 
-    model_dict = net.state_dict()  # 获取当前网络的键值
-    # pretrained_dict = {k: v for k, v in pretrained_weight.items() if k in model_dict}
-    # model_dict.update(pretrained_dict)
+    # pretrained_weight = model_zoo.load_url('https://github.com/lukemelas/EfficientNet-PyTorch/releases/download/1.0/efficientnet-b7-dcc49843.pth')
+    # for key, v in pretrained_weight.items():
+    #     print(key, v.size())
+    # model_dict = net.state_dict()  # 获取当前网络的键值
     # for key, v in model_dict.items():
     #     print(key, v.size())
-    del[pretrained_weight['classifier.0.weight']]
-    del[pretrained_weight['classifier.6.weight']]
-    del[pretrained_weight['classifier.6.bias']]
-    pretrained_dict = {k: v for k, v in pretrained_weight.items() if k in model_dict}
-    model_dict.update(pretrained_dict)
-    net.load_state_dict(model_dict)
-    # for name, value in net.named_parameters():
-    #     if name.find('classifier') == -1:
-    #         value.requires_grad = False
-    #         # print("1=", name)
-    # for name, value in net.named_parameters():
-    #     print(name, value.requires_grad)
-    # input()
+    # del[pretrained_weight['_fc.weight']]
+    # del[pretrained_weight['_fc.bias']]
+    # # del[pretrained_weight['classifier.6.bias']]
+    # net.load_state_dict(pretrained_weight)
     for epoch in range(1, settings.EPOCH + 1):
         if epoch > args.warm:  # =1
             train_scheduler.step(epoch)
